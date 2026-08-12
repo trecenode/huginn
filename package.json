@@ -1,0 +1,224 @@
+{
+  "name": "huginn",
+  "displayName": "Huginn",
+  "description": "Private per-line notes that never touch your source, plus one-click project setup (EditorConfig, Pint, Larastan, Ruff, Prettier/ESLint, CLAUDE.md / AGENTS.md / Cursor / Copilot rules).",
+  "version": "1.1.1",
+  "publisher": "13node",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trecenode/huginn.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.110.0"
+  },
+  "keywords": [
+    "notes",
+    "annotations",
+    "code review",
+    "ai context",
+    "project setup",
+    "editorconfig",
+    "eslint",
+    "prettier",
+    "laravel pint",
+    "ruff"
+  ],
+  "categories": [
+    "Other",
+    "Linters",
+    "Formatters"
+  ],
+  "icon": "./media/icon.png",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "huginn.notes.add",
+        "title": "Huginn: Add note to current line",
+        "icon": "$(note)"
+      },
+      {
+        "command": "huginn.notes.delete",
+        "title": "Huginn: Delete note"
+      },
+      {
+        "command": "huginn.notes.next",
+        "title": "Huginn: Go to next note in this file"
+      },
+      {
+        "command": "huginn.notes.prev",
+        "title": "Huginn: Go to previous note in this file"
+      },
+      {
+        "command": "huginn.notes.importTodos",
+        "title": "Huginn: Import TODO / FIXME comments as notes"
+      },
+      {
+        "command": "huginn.notes.reply",
+        "title": "Huginn: Add note",
+        "icon": "$(note)"
+      },
+      {
+        "command": "huginn.notes.deleteComment",
+        "title": "Huginn: Delete this note",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "huginn.notes.toggleDoneComment",
+        "title": "Huginn: Toggle resolved",
+        "icon": "$(check)"
+      },
+      {
+        "command": "huginn.notes.panel",
+        "title": "Huginn: Open panel"
+      },
+      {
+        "command": "huginn.notes.exportAI",
+        "title": "Huginn: Export AI context to file"
+      },
+      {
+        "command": "huginn.notes.copyAI",
+        "title": "Huginn: Copy AI context to clipboard"
+      },
+      {
+        "command": "huginn.setup.open",
+        "title": "Huginn: Project Setup"
+      },
+      {
+        "command": "huginn.ai.ask",
+        "title": "Huginn: Ask Claude about my notes"
+      },
+      {
+        "command": "huginn.ai.forgetKey",
+        "title": "Huginn: Forget Claude API key"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "huginn.notes.add",
+        "key": "ctrl+shift+n",
+        "mac": "cmd+shift+n",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "huginn.notes.panel",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m"
+      },
+      {
+        "command": "huginn.notes.next",
+        "key": "ctrl+alt+n",
+        "mac": "cmd+alt+n",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "huginn.notes.prev",
+        "key": "ctrl+alt+p",
+        "mac": "cmd+alt+p",
+        "when": "editorTextFocus"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "huginn.notes.reply",
+          "when": "false"
+        },
+        {
+          "command": "huginn.notes.deleteComment",
+          "when": "false"
+        },
+        {
+          "command": "huginn.notes.toggleDoneComment",
+          "when": "false"
+        }
+      ],
+      "comments/commentThread/context": [
+        {
+          "command": "huginn.notes.reply",
+          "group": "inline",
+          "when": "commentController == huginn.comments"
+        }
+      ],
+      "comments/comment/title": [
+        {
+          "command": "huginn.notes.toggleDoneComment",
+          "group": "inline@1",
+          "when": "commentController == huginn.comments && comment == huginn-note"
+        },
+        {
+          "command": "huginn.notes.deleteComment",
+          "group": "inline@2",
+          "when": "commentController == huginn.comments && comment == huginn-note"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "huginn.notes.add",
+          "group": "huginn@1"
+        },
+        {
+          "command": "huginn.notes.panel",
+          "group": "huginn@2"
+        },
+        {
+          "command": "huginn.notes.exportAI",
+          "group": "huginn@3"
+        },
+        {
+          "command": "huginn.ai.ask",
+          "group": "huginn@4"
+        },
+        {
+          "command": "huginn.setup.open",
+          "group": "huginn@5"
+        },
+        {
+          "command": "huginn.notes.importTodos",
+          "group": "huginn@6"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Huginn",
+      "properties": {
+        "huginn.showGutterIcons": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show icons in gutter for lines with notes"
+        },
+        "huginn.showInlinePreview": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show note preview inline (greyed out text)"
+        },
+        "huginn.autoGitignore": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically add huginn-notes.json to .gitignore"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run bundle",
+    "typecheck": "tsc -p ./ --noEmit",
+    "test": "node test/filter.test.js && node test/setup.test.js && node test/anchor.test.js",
+    "bundle": "npm run typecheck && esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --target=node20 --minify --legal-comments=none",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.37",
+    "@types/vscode": "^1.110.0",
+    "esbuild": "^0.28.1",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.116.0"
+  }
+}

@@ -1,0 +1,7 @@
+node_modules/
+out/
+*.vsix
+
+# Huginn
+.vscode/huginn-notes.json
+.vscode/huginn-ai-context.md
