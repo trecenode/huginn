@@ -2,8 +2,22 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { NoteStorageRegistry, DevNote, RootedNote } from './storage';
 import { applySetup, renderSetup, setupStyles } from './setup/panel';
+import {
+  applyMarks,
+  clearNonBasicAscii,
+  marksStyles,
+  renderMarks,
+  setUnicodeHighlight,
+} from './marks/panel';
+import { MarksReport, scanWorkspace } from './marks/scan';
 
-type Tab = 'notes' | 'setup';
+type Tab = 'notes' | 'setup' | 'marks';
+
+const TABS: Tab[] = ['notes', 'setup', 'marks'];
+
+function toTab(value: unknown): Tab {
+  return TABS.includes(value as Tab) ? (value as Tab) : 'notes';
+}
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -14,6 +28,10 @@ export class HuginnPanel {
   static currentPanel: HuginnPanel | undefined;
   private readonly panel: vscode.WebviewPanel;
   private disposables: vscode.Disposable[] = [];
+  private marksReport: MarksReport | undefined;
+  private marksScope = '';
+  private marksScanning = false;
+  private marksCancellation: vscode.CancellationTokenSource | undefined;
 
   static createOrShow(
     storages: NoteStorageRegistry,
@@ -80,10 +98,28 @@ export class HuginnPanel {
             await this.relink(msg.id);
             break;
           case 'tab':
-            this.tab = msg.tab === 'setup' ? 'setup' : 'notes';
+            this.tab = toTab(msg.tab);
             break;
           case 'apply':
             await applySetup(this.root, msg.ids ?? []);
+            this.update();
+            break;
+          case 'scanMarks':
+            await this.scanMarks(msg.scope ?? '');
+            break;
+          case 'stopScan':
+            this.marksCancellation?.cancel();
+            break;
+          case 'applyMarks':
+            if (this.marksReport) await applyMarks(this.marksReport, msg.paths ?? []);
+            await this.scanMarks(this.marksScope);
+            break;
+          case 'setHighlight':
+            await setUnicodeHighlight(!!msg.enabled);
+            this.update();
+            break;
+          case 'clearNonBasicAscii':
+            await clearNonBasicAscii();
             this.update();
             break;
           case 'refresh':
@@ -99,6 +135,39 @@ export class HuginnPanel {
     );
 
     storages.onDidChange(() => this.update(), null, this.disposables);
+  }
+
+  private async scanMarks(scope: string): Promise<void> {
+    if (this.marksScanning) return;
+
+    this.marksScope = scope;
+    this.marksScanning = true;
+    this.marksCancellation = new vscode.CancellationTokenSource();
+    const token = this.marksCancellation.token;
+    this.update();
+
+    try {
+      this.marksReport = await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: `Huginn: scanning ${scope.trim() || 'the workspace'} for AI marks…`,
+          cancellable: true,
+        },
+        (progress, progressToken) => {
+          progressToken.onCancellationRequested(() => this.marksCancellation?.cancel());
+          return scanWorkspace({
+            scope,
+            token,
+            onProgress: (done, total) => progress.report({ message: `${done} / ${total}` }),
+          });
+        }
+      );
+    } finally {
+      this.marksScanning = false;
+      this.marksCancellation.dispose();
+      this.marksCancellation = undefined;
+      this.update();
+    }
   }
 
   private async navigateTo(id: string): Promise<void> {
@@ -428,6 +497,7 @@ export class HuginnPanel {
     border-radius: 10px;
   }
 ${setupStyles}
+${marksStyles}
 </style>
 </head>
 <body>
@@ -445,7 +515,12 @@ ${setupStyles}
 <div class="tabs">
   <button class="tab-btn" id="btn-notes" onclick="showTab('notes')">📝 Notes</button>
   <button class="tab-btn" id="btn-setup" onclick="showTab('setup')">⚙ Project Setup</button>
+  <button class="tab-btn" id="btn-marks" onclick="showTab('marks')">🧹 Clean AI marks</button>
   <button class="tab-btn tab-action" onclick="importTodos()" title="Scan the workspace for TODO / FIXME / HACK / XXX comments and import them as notes">📥 Import TODOs</button>
+</div>
+
+<div id="tab-marks">
+${renderMarks({ report: this.marksReport, scope: this.marksScope, scanning: this.marksScanning })}
 </div>
 
 <div id="tab-setup">
@@ -514,15 +589,41 @@ ${filesHtml}`}
     vscode.postMessage({ command: 'relink', id });
   }
 
+  const TABS = ${JSON.stringify(TABS)};
+
   function showTab(name) {
-    document.getElementById('tab-notes').classList.toggle('hidden', name !== 'notes');
-    document.getElementById('tab-setup').classList.toggle('hidden', name !== 'setup');
-    document.getElementById('btn-notes').classList.toggle('active', name === 'notes');
-    document.getElementById('btn-setup').classList.toggle('active', name === 'setup');
+    for (const tab of TABS) {
+      document.getElementById('tab-' + tab).classList.toggle('hidden', tab !== name);
+      document.getElementById('btn-' + tab).classList.toggle('active', tab === name);
+    }
     document.querySelector('.stats').classList.toggle('hidden', name !== 'notes');
     vscode.postMessage({ command: 'tab', tab: name });
   }
   showTab('${this.tab}');
+
+  function scanMarks() {
+    const scope = document.getElementById('marks-scope');
+    vscode.postMessage({ command: 'scanMarks', scope: scope ? scope.value : '' });
+  }
+
+  function stopScan() {
+    vscode.postMessage({ command: 'stopScan' });
+  }
+
+  function applyMarks() {
+    const paths = Array.from(
+      document.querySelectorAll('#tab-marks input[type=checkbox]:checked')
+    ).map((el) => el.dataset.path);
+    if (paths.length) vscode.postMessage({ command: 'applyMarks', paths });
+  }
+
+  function setHighlight(enabled) {
+    vscode.postMessage({ command: 'setHighlight', enabled });
+  }
+
+  function clearNonBasicAscii() {
+    vscode.postMessage({ command: 'clearNonBasicAscii' });
+  }
 
   function applySetup() {
     const ids = Array.from(

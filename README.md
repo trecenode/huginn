@@ -2,10 +2,11 @@
 
 **Private per-line notes that never touch your source code, plus one-click project setup.**
 
-A VS Code extension in two parts, sharing one panel:
+A VS Code extension in three parts, sharing one panel:
 
 1. **Notes** — annotate any line with private context that stays out of the repository and exports cleanly to an AI assistant.
 2. **Project Setup** — detect the stack of the workspace and generate the style/lint config files it needs.
+3. **Clean AI marks** — find and remove the invisible characters and provenance metadata that pasted AI output leaves in the repo.
 
 ---
 
@@ -97,6 +98,35 @@ Install commands run in an integrated terminal named `Huginn`, one per line, so 
 
 ---
 
+## 3. Clean AI marks
+
+Pasting model output into a repository brings characters nobody sees and metadata nobody reads: zero-width spaces that break a `grep`, bidi overrides that make a line render differently from how it executes, no-break spaces that turn into mystery diffs, `generator: Claude` sitting in a frontmatter block, EXIF and Content Credentials riding along in a screenshot.
+
+The third tab scans and lists what it finds, per file. The path box above the button limits the scan — leave it empty for the whole workspace, or type a folder (`src/`, `resources/views`) or a glob (`app/**/*.php`). While a scan runs the button turns into **Stop**; stopping keeps everything found up to that point.
+
+| Layer | What it looks for | Where |
+|-------|-------------------|-------|
+| Invisible Unicode | Zero-width family, bidi overrides, variation selectors, tag characters, other format characters | Every text file |
+| Space homoglyphs | No-break, en/em, thin, ideographic spaces → `U+0020` | Every text file |
+| Frontmatter | `generator`, `ai_generated`, `provenance`, `model`… and their nested blocks | `.md`, `.markdown`, `.mdx` |
+| HTML metadata | AI `<meta>` tags, provenance JSON-LD, `data-ai*` attributes | `.html`, `.htm` |
+| SVG metadata | `<metadata>`, XMP packets, generator attributes, provenance comments | `.svg` |
+| Image metadata | PNG `tEXt`/`zTXt`/`iTXt`/`eXIf`/C2PA chunks, JPEG `APP1`–`APP15`, `APP11` JUMBF, `COM` | `.png`, `.jpg`, `.jpeg` |
+
+Each finding is graded **confirmed** (a parsed provenance field or a C2PA container), **probable** (an AI marker inside a real metadata structure) or **informational** (context, such as a WordPress `generator` tag — which is left alone). Files with a confirmed or probable finding are pre-ticked; the rest are yours to pick.
+
+**Cleaning never surprises you.** Text files are edited in the editor and left **unsaved**, so the diff is there to read before anything hits disk. Images are never rewritten in place: a stripped copy is written next to the original as `name.cleaned.png`.
+
+What is deliberately preserved: emoji sequences (`❤️‍🔥`), flag tag characters (`🏴󠁧󠁢󠁳󠁣󠁴󠁿`), the joiners that Persian, Devanagari and other complex scripts need, and Arabic/Syriac orthographic marks. They are invisible too, and stripping them changes what the text says.
+
+A checkbox at the bottom of the tab, **on by default**, keeps VS Code's own `editor.unicodeHighlight.invisibleCharacters` and `.ambiguousCharacters` on for the workspace, so a pasted carrier is flagged as it lands instead of only when you remember to scan.
+
+**The editor warning and an empty scan can both be right.** VS Code flags anything it considers unusual; Huginn lists only what it can clean, and it keeps emoji sequences, script joiners and flag tag characters on purpose. A `—`, a `→` or a `🔥` is not an AI mark. If your workspace also has `editor.unicodeHighlight.nonBasicASCII` set — Huginn 1.2.0 wrote it, wrongly — every non-ASCII character in the file lights up; the tab offers a button to clear it.
+
+Out of scope, on purpose: statistical token-sampling watermarks (removing those means rewriting the prose), pixel-domain watermarks such as SynthID, C2PA soft binding, and DOCX/ODT/PDF metadata.
+
+---
+
 ## Install
 
 ### From the VSIX
@@ -135,6 +165,7 @@ Both jumps wrap around and print the note in the status bar.
 - **Huginn: Ask Claude about my notes**
 - **Huginn: Project Setup**
 - **Huginn: Import TODO / FIXME comments as notes**
+- **Huginn: Clean AI marks in this file**
 
 ### Command Palette (`Ctrl+Shift+P`)
 
@@ -148,10 +179,12 @@ Both jumps wrap around and print the note in the status bar.
 - `Huginn: Ask Claude about my notes` → sends the notes to the Claude API and opens the answer
 - `Huginn: Forget Claude API key` → removes the key from the OS keychain
 - `Huginn: Project Setup`
+- `Huginn: Clean AI marks` → opens the panel on the scan tab
+- `Huginn: Clean AI marks in this file` → cleans the active editor, leaving it unsaved
 
 ### The panel
 
-One webview with two tabs — **Notes** and **Project Setup**. The status bar item (`📝 3 notes`, open notes only) opens it. The Notes tab groups notes by file and filters them by free text (note, tags, path), month, year, tag and status (open, resolved, stale), all combined with AND. Click a line badge to jump to the code; click the note text to edit it in place.
+One webview with three tabs — **Notes**, **Project Setup** and **Clean AI marks**. The status bar item (`📝 3 notes`, open notes only) opens it. The Notes tab groups notes by file and filters them by free text (note, tags, path), month, year, tag and status (open, resolved, stale), all combined with AND. Click a line badge to jump to the code; click the note text to edit it in place.
 
 ---
 
@@ -233,6 +266,7 @@ The exported file is plain Markdown. Feed it as a system prompt or as extra cont
 - Source code is **never** stored — only line numbers and your comments
 - The Anthropic API key lives in the OS keychain, never in a settings or project file
 - `Ask Claude about my notes` is the one command that leaves your machine: it sends the same metadata-and-comments Markdown as the export — no source code — to the Anthropic API. Everything else is local.
+- `Clean AI marks` reads and writes files locally and sends nothing anywhere: the scan and every cleaning layer run inside the extension, with no network call and no external tool.
 - Safe to use in client repositories
 
 ---

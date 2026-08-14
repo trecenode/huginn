@@ -1,3 +1,5 @@
+import { cleanText } from './marks/unicode';
+
 export interface LineChange {
   startLine: number;
   endLine: number;
@@ -24,7 +26,7 @@ export function shiftLine(line: number, change: LineChange): number {
 export const MAX_ANCHOR = 300;
 
 export function makeAnchor(lineText: string): string {
-  return lineText.trim().slice(0, MAX_ANCHOR);
+  return cleanText(lineText).text.trim().slice(0, MAX_ANCHOR);
 }
 
 export function findAnchor(

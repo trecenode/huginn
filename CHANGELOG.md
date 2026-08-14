@@ -3,6 +3,30 @@
 All notable changes to Huginn are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## 1.2.1
+
+### Fixed
+
+- **The editor no longer flags every non-ASCII character.** 1.2.0 turned on `editor.unicodeHighlight.nonBasicASCII`, which marks em dashes, arrows, accented letters and emoji — none of which are AI marks. The result was a file lit up with warnings while the scan correctly reported nothing to clean. Huginn now manages only `invisibleCharacters` and `ambiguousCharacters`, the two that match what it can actually remove, and the tab offers a one-click undo for workspaces where 1.2.0 already wrote the noisy setting.
+
+### Changed
+
+- **Editor highlighting is a checkbox, on by default.** It replaces the one-way "turn on" button, so the highlighting can be switched off again from the same place, and it shows the state the workspace is really in.
+- The tab spells out why the editor can warn about a character the scan does not list: the editor flags anything unusual, while the scan lists only what it can clean and deliberately keeps emoji sequences, script joiners and flag tag characters intact.
+
+## 1.2.0
+
+### Added
+
+- **`Clean AI marks` panel tab.** Scans the workspace for the traces pasted AI output leaves behind: invisible Unicode carriers (zero-width, bidi overrides, variation selectors, tag characters), space homoglyphs, AI metadata in Markdown frontmatter and HTML `<meta>` / JSON-LD / `data-ai*`, SVG `<metadata>` and XMP blocks, and PNG/JPEG metadata chunks. Findings are listed per file and graded confirmed / probable / informational, and cleaning the picked files leaves them open and unsaved so the diff can be read before saving. Images are never rewritten in place — they are written next to the original as `name.cleaned.ext`.
+- **`Huginn: Clean AI marks in this file`.** The same clean for the active editor, from the context menu or the palette.
+- **Scoped, interruptible scans.** The scan takes a path — a folder such as `src/`, or a glob such as `app/**/*.php` — so a large repository can be cut down to the part being worked on. Empty means the whole workspace. A running scan can be stopped from the tab or from the progress notification, and stopping keeps whatever was already found instead of discarding it.
+- **Native unicode highlighting.** The tab can turn on `editor.unicodeHighlight.invisibleCharacters`, `.ambiguousCharacters` and `.nonBasicASCII` for the workspace, so VSCode flags these characters as they are pasted rather than only when the workspace is scanned.
+
+### Changed
+
+- Note anchors ignore invisible characters, so cleaning a file no longer strands the notes attached to the lines it touched.
+
 ## 1.1.0
 
 ### Added

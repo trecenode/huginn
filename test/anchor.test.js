@@ -90,6 +90,15 @@ assert.ok(!makeAnchor('   spaced   ').startsWith(' '), 'anchor trimmed');
 const long = 'y'.repeat(400);
 assert.strictEqual(findAnchor([long], 1, makeAnchor(long)), 1, 'a capped anchor still matches');
 
+const dirty = 'const total​ = price;';
+const scrubbed = 'const total = price;';
+assert.strictEqual(makeAnchor(dirty), scrubbed, 'invisible carriers never reach the anchor');
+assert.strictEqual(
+  findAnchor([scrubbed], 1, makeAnchor(dirty)),
+  1,
+  'cleaning a line does not strand its note'
+);
+
 assert.deepStrictEqual(toLines('a\r\nb\nc'), ['a', 'b', 'c'], 'CRLF and LF both split');
 
 const php = parseTodo('    // TODO: refactor this into a service');

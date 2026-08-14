@@ -1,8 +1,8 @@
 {
   "name": "huginn",
   "displayName": "Huginn",
-  "description": "Private per-line notes that never touch your source, plus one-click project setup (EditorConfig, Pint, Larastan, Ruff, Prettier/ESLint, CLAUDE.md / AGENTS.md / Cursor / Copilot rules).",
-  "version": "1.1.1",
+  "description": "Private per-line notes that never touch your source, one-click project setup (EditorConfig, Pint, Larastan, Ruff, Prettier/ESLint, CLAUDE.md / AGENTS.md / Cursor / Copilot rules), and a cleaner for the invisible Unicode and AI metadata pasted output leaves behind.",
+  "version": "1.2.1",
   "publisher": "13node",
   "repository": {
     "type": "git",
@@ -22,7 +22,12 @@
     "eslint",
     "prettier",
     "laravel pint",
-    "ruff"
+    "ruff",
+    "invisible characters",
+    "zero width space",
+    "unicode",
+    "metadata",
+    "ai detection"
   ],
   "categories": [
     "Other",
@@ -87,6 +92,14 @@
       {
         "command": "huginn.setup.open",
         "title": "Huginn: Project Setup"
+      },
+      {
+        "command": "huginn.marks.open",
+        "title": "Huginn: Clean AI marks"
+      },
+      {
+        "command": "huginn.marks.cleanFile",
+        "title": "Huginn: Clean AI marks in this file"
       },
       {
         "command": "huginn.ai.ask",
@@ -180,6 +193,10 @@
         {
           "command": "huginn.notes.importTodos",
           "group": "huginn@6"
+        },
+        {
+          "command": "huginn.marks.cleanFile",
+          "group": "huginn@7"
         }
       ]
     },
@@ -207,7 +224,7 @@
   "scripts": {
     "vscode:prepublish": "npm run bundle",
     "typecheck": "tsc -p ./ --noEmit",
-    "test": "node test/filter.test.js && node test/setup.test.js && node test/anchor.test.js",
+    "test": "node test/filter.test.js && node test/setup.test.js && node test/anchor.test.js && node test/unicode.test.js && node test/containers.test.js && node test/images.test.js && node test/scan.test.js",
     "bundle": "npm run typecheck && esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --target=node20 --minify --legal-comments=none",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./"

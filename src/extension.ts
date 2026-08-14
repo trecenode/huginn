@@ -8,6 +8,7 @@ import { CommentsProvider } from './comments';
 import { askClaude, forgetApiKey } from './claude';
 import { NoteTracker } from './tracker';
 import { importTodos } from './todos';
+import { cleanActiveFile } from './marks/panel';
 
 export function activate(context: vscode.ExtensionContext): void {
   if (!vscode.workspace.workspaceFolders?.length) return;
@@ -173,6 +174,13 @@ export function activate(context: vscode.ExtensionContext): void {
     if (root) HuginnPanel.createOrShow(storages, context.extensionUri, root, 'setup');
   });
 
+  const openMarks = vscode.commands.registerCommand('huginn.marks.open', () => {
+    const root = storages.activeRoot();
+    if (root) HuginnPanel.createOrShow(storages, context.extensionUri, root, 'marks');
+  });
+
+  const cleanFile = vscode.commands.registerCommand('huginn.marks.cleanFile', cleanActiveFile);
+
   const askAI = vscode.commands.registerCommand('huginn.ai.ask', async () => {
     const filter = await askRangeFilter(storages);
     if (filter === CANCELLED) return;
@@ -210,6 +218,8 @@ export function activate(context: vscode.ExtensionContext): void {
     exportForAI,
     copyAIContext,
     openSetup,
+    openMarks,
+    cleanFile,
     askAI,
     forgetKey,
     decorations,
